@@ -23,24 +23,26 @@ app.get('/webhook', (req, res) => {
 
 // Receive webhook events
 app.post('/webhook', async (req, res) => {
+  console.log('Webhook received:', JSON.stringify(req.body, null, 2));
+  
   const body = req.body;
 
   if (body.object === 'page') {
     for (const entry of body.entry) {
+      console.log('Entry:', JSON.stringify(entry, null, 2));
+      
       for (const event of entry.messaging || []) {
+        console.log('Event:', JSON.stringify(event, null, 2));
 
-        // New follow / conversation started
         if (event.postback || event.follow) {
           const senderId = event.sender.id;
           await sendMessage(senderId);
         }
 
-        // Optin (someone messages your page for the first time)
         if (event.message && !event.message.is_echo) {
           const senderId = event.sender.id;
           await sendMessage(senderId);
         }
-
       }
     }
     res.sendStatus(200);
