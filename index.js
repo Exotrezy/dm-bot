@@ -5,13 +5,11 @@ const app = express();
 app.use(express.json());
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN; // you make this up, any string
 
-const MESSAGES = {
-  follow: "Hey! Thanks so much for following — really appreciate the support! Feel free to reach out anytime 🙌",
-  message: "Hey! Thanks for reaching out to us — we'll get back to you as soon as possible! 😊"
-};
+const MESSAGE = "Hey! Thanks for following — really appreciate the support! 🙌";
 
+// Facebook webhook verification (one-time setup)
 app.get('/webhook', (req, res) => {
   if (
     req.query['hub.mode'] === 'subscribe' &&
@@ -23,23 +21,28 @@ app.get('/webhook', (req, res) => {
   }
 });
 
+// Receive webhook events
 app.post('/webhook', async (req, res) => {
   console.log('Webhook received:', JSON.stringify(req.body, null, 2));
-
+  
   const body = req.body;
 
   if (body.object === 'page') {
     for (const entry of body.entry) {
+      console.log('Entry:', JSON.stringify(entry, null, 2));
+      
       for (const event of entry.messaging || []) {
+        console.log('Event:', JSON.stringify(event, null, 2));
 
-        if (event.follow) {
-          await sendMessage(event.sender.id, MESSAGES.follow);
+        if (event.postback || event.follow) {
+          const senderId = event.sender.id;
+          await sendMessage(senderId);
         }
 
         if (event.message && !event.message.is_echo) {
-          await sendMessage(event.sender.id, MESSAGES.message);
+          const senderId = event.sender.id;
+          await sendMessage(senderId);
         }
-
       }
     }
     res.sendStatus(200);
@@ -48,16 +51,16 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-async function sendMessage(recipientId, text) {
+async function sendMessage(recipientId) {
   try {
     await axios.post(
       `https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
       {
         recipient: { id: recipientId },
-        message: { text }
+        message: { text: MESSAGE }
       }
     );
-    console.log(`DM sent to ${recipientId}: "${text}"`);
+    console.log(`DM sent to ${recipientId}`);
   } catch (err) {
     console.error('Failed to send DM:', err.response?.data || err.message);
   }
